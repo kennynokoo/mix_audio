@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音頻合併器 Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 頂部導航欄 -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fas fa-waveform-path"></i>
+                <h1>音頻合併器 Pro</h1>
+            </div>
+            <div class="header-actions">
+                <button id="selectFilesBtn" class="btn btn-primary">
+                    <i class="fas fa-file-audio"></i> 選擇音頻
+                </button>
+                <button id="addSilenceBtn" class="btn btn-secondary">
+                    <i class="fas fa-volume-mute"></i> 添加靜音
+                </button>
+            </div>
+        </header>
+
+        <!-- 主要內容區 -->
+        <main class="app-main">
+            <!-- 靜音設置面板 -->
+            <div class="panel silence-panel" id="silencePanel">
+                <div class="panel-header">
+                    <h3><i class="fas fa-sliders-h"></i> 靜音設置</h3>
+                    <button class="btn-icon" id="closeSilencePanel">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="panel-body">
+                    <div class="input-group">
+                        <label for="silenceDuration">靜音時長 (秒):</label>
+                        <div class="duration-control">
+                            <input type="number" id="silenceDuration" min="1" max="300" value="5">
+                            <div class="duration-buttons">
+                                <button class="btn-mini" id="increaseDuration"><i class="fas fa-plus"></i></button>
+                                <button class="btn-mini" id="decreaseDuration"><i class="fas fa-minus"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="confirmSilenceBtn" class="btn btn-success">
+                        <i class="fas fa-check"></i> 確認添加
+                    </button>
+                </div>
+            </div>
+
+            <!-- 音頻片段區域 -->
+            <div class="segments-wrapper">
+                <div class="segments-header">
+                    <h2><i class="fas fa-layer-group"></i> 音頻片段</h2>
+                    <div class="segments-tools">
+                        <button id="clearAllBtn" class="btn-text">
+                            <i class="fas fa-trash-alt"></i> 清除所有
+                        </button>
+                        <span class="segments-count" id="segmentsCount">0 個片段</span>
+                    </div>
+                </div>
+                <div class="drag-hint">
+                    <i class="fas fa-info-circle"></i> 提示：按住片段可拖動排序 (上下均可拖放)
+                </div>
+                <div id="segmentsContainer" class="segments-container">
+                    <!-- 此處將動態添加音頻片段 -->
+                    <div class="empty-state" id="emptyState">
+                        <i class="fas fa-music"></i>
+                        <p>請添加音頻片段或靜音</p>
+                    </div>
+                </div>
+            </div>
+
+			<!-- 播放控制區 -->
+			<div class="player-controls">
+				<div class="time-display">
+					<span id="currentTime">000:00.00</span>
+				</div>
+				<button id="playPauseBtn" class="player-btn" disabled>
+					<i class="fas fa-play"></i>
+				</button>
+				<div class="seek-slider-container">
+					<div class="seek-slider-buffer" id="bufferBar"></div>
+					<input type="range" id="seekSlider" min="0" max="1000" value="0" disabled>
+				</div>
+				<div class="time-display">
+					<span id="totalTime">000:00.00</span>
+				</div>
+				<div class="player-status">
+					<span class="player-status-indicator" id="playerStatus">未播放</span>
+				</div>
+			</div>
+
+            <!-- 合併控制區 -->
+            <div class="merge-controls">
+                <div class="format-selector">
+                    <label for="exportFormat">導出格式:</label>
+                    <select id="exportFormat">
+                        <option value="mp3">MP3</option>
+                        <option value="wav">WAV</option>
+                        <option value="m4a">M4A</option>
+                    </select>
+                </div>
+                <button id="mergeButton" class="btn btn-large btn-primary">
+                    <i class="fas fa-magic"></i> 合併音頻
+                </button>
+            </div>
+
+            <!-- 進度條 -->
+            <div class="progress-area" id="progressArea">
+                <div class="progress-container">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+                <div id="statusLabel" class="status-label"></div>
+            </div>
+        </main>
+
+        <!-- 底部狀態欄 -->
+        <footer class="app-footer">
+            <div class="status-message" id="statusMessage">就緒</div>
+            <div class="app-version">音頻合併器 Pro v2.0</div>
+        </footer>
+
+        <!-- 隱藏的上傳表單 -->
+        <div style="display: none;">
+            <input type="file" id="fileInput" accept=".mp3,.wav,.m4a,audio/mp3,audio/wav,audio/x-m4a,audio/*" multiple>
+        </div>
+
+        <!-- 音頻播放器 -->
+        <audio id="audioPlayer" style="display: none;"></audio>
+    </div>
+
+    <!-- 模態對話框 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle"></h3>
+                <button id="modalClose" class="btn-icon">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer">
+                <button id="modalConfirm" class="btn btn-primary">確認</button>
+                <button id="modalCancel" class="btn btn-text">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示消息 -->
+    <div class="toast" id="toast"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="/js/audio-segment.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
