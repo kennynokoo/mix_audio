@@ -7,6 +7,8 @@ const ffmpeg = require('fluent-ffmpeg');
 const { promisify } = require('util');
 const http = require('http');
 const socketIo = require('socket.io');
+
+// 定義PORT變量（修復PORT未定義錯誤）
 const PORT = process.env.PORT || 3000;
 
 // 創建Express應用
@@ -28,6 +30,68 @@ const assetsDir = path.join(__dirname, 'assets');
         fs.mkdirSync(dir, { recursive: true });
     }
 });
+
+// 添加自動清理文件功能
+function cleanupFiles() {
+    console.log('開始定期清理臨時文件...', new Date().toLocaleString());
+    
+    // 獲取當前時間
+    const now = new Date();
+    
+    // 設置不同的保留期限（毫秒）
+    const uploadsRetention = 7 * 24 * 60 * 60 * 1000; // 7天
+    const tempRetention = 24 * 60 * 60 * 1000;       // 1天
+    const outputRetention = 14 * 24 * 60 * 60 * 1000; // 14天
+    
+    // 清理函數
+    function cleanDir(dir, retention) {
+        if (!fs.existsSync(dir)) return;
+        
+        fs.readdir(dir, (err, files) => {
+            if (err) {
+                console.error(`讀取目錄 ${dir} 時出錯:`, err);
+                return;
+            }
+            
+            files.forEach(file => {
+                const filePath = path.join(dir, file);
+                
+                fs.stat(filePath, (err, stats) => {
+                    if (err) {
+                        console.error(`獲取文件 ${filePath} 狀態時出錯:`, err);
+                        return;
+                    }
+                    
+                    // 如果是目錄，跳過
+                    if (stats.isDirectory()) return;
+                    
+                    // 檢查文件年齡
+                    const fileAge = now - stats.mtime;
+                    if (fileAge > retention) {
+                        fs.unlink(filePath, err => {
+                            if (err) {
+                                console.error(`刪除文件 ${filePath} 時出錯:`, err);
+                            } else {
+                                console.log(`已刪除舊文件: ${filePath}`);
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    }
+    
+    // 清理各個目錄
+    cleanDir(uploadsDir, uploadsRetention);
+    cleanDir(tempDir, tempRetention);
+    cleanDir(outputDir, outputRetention);
+}
+
+// 每天執行一次清理
+setInterval(cleanupFiles, 24 * 60 * 60 * 1000);
+
+// 啟動時也執行一次清理，但延遲10分鐘，避免影響應用啟動
+setTimeout(cleanupFiles, 10 * 60 * 1000);
 
 // 設定文件上傳
 const storage = multer.diskStorage({
@@ -426,8 +490,9 @@ app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
 
+// 啟動服務器（修改為允許內網訪問）
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`服務器運行在端口 ${PORT}`);
-    console.log(`請訪問 http://localhost:${PORT}`);
-    console.log(`內網用戶請訪問 http://10.132.67.167:${PORT}`);
+    console.log(`本機訪問: http://localhost:${PORT}`);
+    console.log(`內網訪問: http://10.132.67.167:${PORT}`);
 });
